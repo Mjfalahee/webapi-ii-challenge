@@ -68,23 +68,50 @@ router.post('/', async (req, res) => {
 });
 
 // deletes a specific post
+//Deletes the post, but doesn't return properly
 
 router.delete('/:id', async (req, res) => {
+    const id = req.params.id;
+
+    //find post
     try {
-    const deleted = await Blogs.remove(req.params.id);
-    if (deleted) {
-        const post = await Blogs.findById(req.params.id)
-        if (post.length > 0) {
-                    res.status(200).json(post);
-                }  
+        const post = await Blogs.findById(id);
+        console.log(post);
+        if (post == 0) {
+            return post;
+        }
+        else {
+            console.log('Inside find!');
+            res.status(404).json({
+                message: 'The post with the specified ID does not exist.'
+                });
             }
-    else {
+        }
+    catch (error) {
+        console.log(error);
+        res.status(500).json({
+            message: 'Delete failed. Post could not be retrieved.'
+        })
+    }
+
+    //delete post
+    try {
+    const deleted = await Blogs.remove(id);
+
+        if (deleted > 0) {
+        res.status(200).json({
+            message: 'The post has been deleted'
+        });
+          }  
+        else {
+        console.log('Inside delete!');
         res.status(404).json({
             message: "The post specified by that ID could not be found."
         })
     }
     }
     catch (error) {
+        console.log(error);
         res.status(500).json({
             message: 'The post could not be removed.'
         })
@@ -117,39 +144,51 @@ router.get('/:id/comments', async (req, res) => {
 
 //post new comment
 // broken
-router.post('/:id/comments', (req, res) => {
-    const text = req.body;
+router.post('/:id/comments', async (req, res) => {
+    try {
+        const comment = await Blogs.insertComment(req.body);
+        res.status(201).json(comment);
+    }
 
-    Blogs.findById(id)
-        .then(post => {
-            Blogs.insertComment(post)
-                .then(comments => {
-                    if (!text) {
-                        res.status(400).json({
-                            success: false,
-                            message: 'Please provide text for the comment.',
-                        })
-                    }
-                    res.status(201).json({
-                        success: true,
-                        message: 'Comment created',
-                        comments
-                    })
-                .catch(error => {
-                    res.status(500).json({
-                        success: false,
-                        message: 'There was an error while saving the comment to the database',
-                    })
-                })
-                })
+    catch (error) {
+        console.log(error);
+        res.status(500).json({
+            message: 'There was an error while saving the comment to the database'
         })
-        .catch(error => {
+    }
+});
+
+
+//update a specific post
+
+router.put('/:id', async (req, res) => {
+    const id = req.params.id;
+    const { title, contents } = req.body;
+
+    if (!title || !contents) {
+        return res.status(400).json({
+            message: 'Please provide title and contents for the post.'
+        });
+    }
+
+    try {
+        const post = await Blogs.update(id, {title, contents})
+        if (post == 0) {
             res.status(404).json({
-                success: false,
-                message: 'The post with the specified ID does not exist',
-            })
-        })
-})
+                message: 'The post with the specified ID does not exist.'
+            });
+        }
 
+        else {
+            res.status(201).json(post);
+        }
+    }
+    catch (error) {
+        console.log(error);
+        res.status(500).json({
+            message: 'The post information could not be modified'
+        });
+    }
+})
 module.exports = router;
 
